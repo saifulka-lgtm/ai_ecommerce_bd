@@ -166,3 +166,15 @@ def test_delivered_order_details_shown_in_bangla_and_english(db, sample_catalog,
     assert en["tool_used"] == "get_order"
     assert "delivered" in en["reply"]
     assert "House 5" in en["reply"]
+
+
+def test_order_confirmation_reply_has_full_details(db, sample_catalog, session_id):
+    placed = _place_order(db, session_id)
+    assert placed["tool_used"] == "create_demo_order"
+    reply = placed["reply"]
+    assert placed["data"]["order_number"] in reply
+    assert "Basic Cotton T-Shirt" in reply
+    assert "House 5" in reply
+    assert "01712345678" in reply
+    assert "demo" in reply.lower()
+    assert placed["data"]["order"]["items"]

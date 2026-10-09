@@ -145,15 +145,34 @@ def _cart_reply(prefix_en: str, prefix_bn: str):
 
 
 def _create_order(data, language):
+    """Order confirmation. Every value comes from the order the tool just
+    created in the database - nothing here is invented."""
+    items = data.get("items") or []
     if language == "bn":
-        return (
-            f"আপনার অর্ডার সফলভাবে তৈরি হয়েছে!\nঅর্ডার আইডি: {data['order_number']}\n"
-            f"মোট: ৳{data['total']:.0f}\nপেমেন্ট: {data['payment_status']}\nঅবস্থা: {data['order_status']}"
+        lines = [f"আপনার অর্ডার সফলভাবে কনফার্ম হয়েছে! অর্ডার আইডি: {data['order_number']}"]
+        for i in items:
+            lines.append(f"• {i['product_name']} ({i['size']}/{i['color']}) × {i['quantity']} = ৳{i['subtotal']:.0f}")
+        lines.append(f"নাম: {data['customer_name']}, ফোন: {data['customer_phone']}")
+        lines.append(f"ঠিকানা: {data['customer_address']}")
+        lines.append(
+            f"সাবটোটাল ৳{data['subtotal']:.0f}, ডেলিভারি চার্জ ৳{data['delivery_charge']:.0f}, "
+            f"মোট ৳{data['total']:.0f}"
         )
-    return (
-        f"Order successfully created!\nOrder ID: {data['order_number']}\n"
-        f"Total: ৳{data['total']:.0f}\nPayment: {data['payment_status']}\nStatus: {data['order_status']}"
+        lines.append(f"পেমেন্ট: {data['payment_method']} ({data['payment_status']}), অবস্থা: {data['order_status']}")
+        lines.append("এটি একটি ডেমো অর্ডার, কোনো আসল পেমেন্ট নেওয়া হয়নি।")
+        return "\n".join(lines)
+    lines = [f"Your order is confirmed! Order ID: {data['order_number']}"]
+    for i in items:
+        lines.append(f"• {i['product_name']} ({i['size']}/{i['color']}) x {i['quantity']} = ৳{i['subtotal']:.0f}")
+    lines.append(f"Name: {data['customer_name']}, Phone: {data['customer_phone']}")
+    lines.append(f"Address: {data['customer_address']}")
+    lines.append(
+        f"Subtotal ৳{data['subtotal']:.0f}, delivery ৳{data['delivery_charge']:.0f}, "
+        f"total ৳{data['total']:.0f}"
     )
+    lines.append(f"Payment: {data['payment_method']} ({data['payment_status']}), status: {data['order_status']}")
+    lines.append("This is a demo order - no real payment was taken.")
+    return "\n".join(lines)
 
 
 STATUS_TEXT = {
