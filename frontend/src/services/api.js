@@ -67,6 +67,8 @@ export const api = {
     request(`/admin/variants/${variantId}`, { method: "PUT", body: payload, token }),
   adminListOrders: (token, status) => request(`/admin/orders${status ? `?status=${status}` : ""}`, { token }),
   adminFulfillmentEvents: (token, limit = 15) => request(`/admin/fulfillment-events?limit=${limit}`, { token }),
+  adminInventory: (token) => request("/admin/inventory", { token }),
+  adminStockMovements: (token, limit = 20) => request(`/admin/stock-movements?limit=${limit}`, { token }),
   adminListAILogs: (token, limit = 50) => request(`/admin/ai-logs?limit=${limit}`, { token }),
   adminCreateCategory: (token, name) => request("/admin/categories", { method: "POST", body: { name, slug: name.toLowerCase().replace(/\s+/g, "-") }, token }),
 };

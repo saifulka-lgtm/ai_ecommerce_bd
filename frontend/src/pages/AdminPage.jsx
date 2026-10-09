@@ -4,12 +4,14 @@ import AdminLogin from "../components/admin/AdminLogin";
 import AdminDashboard from "../components/admin/AdminDashboard";
 import AdminProducts from "../components/admin/AdminProducts";
 import AdminOrders from "../components/admin/AdminOrders";
+import AdminInventory from "../components/admin/AdminInventory";
 import AdminAILogs from "../components/admin/AdminAILogs";
 
 const TABS = [
   { id: "dashboard", label: "Dashboard" },
   { id: "products", label: "Products" },
   { id: "orders", label: "Orders" },
+  { id: "inventory", label: "Inventory" },
   { id: "ai-logs", label: "AI Activity" },
 ];
 
@@ -64,6 +66,7 @@ export default function AdminPage() {
         {tab === "dashboard" && <AdminDashboard token={token} />}
         {tab === "products" && <AdminProducts token={token} />}
         {tab === "orders" && <AdminOrders token={token} />}
+        {tab === "inventory" && <AdminInventory token={token} />}
         {tab === "ai-logs" && <AdminAILogs token={token} />}
       </main>
     </div>

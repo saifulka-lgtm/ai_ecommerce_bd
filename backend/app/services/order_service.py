@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.order import Order, OrderItem, OrderStatus
 from app.models.payment import Payment
-from app.services import cart_service, product_service
+from app.services import cart_service, product_service, inventory_service
 from app.utils.generators import generate_order_number, generate_transaction_ref
 
 VALID_PAYMENT_METHODS = {"demo_cod", "demo_card", "demo_mobile"}
@@ -100,6 +100,7 @@ def create_demo_order(
         )
         # Decrement stock now that the order is committed to.
         item.variant.stock -= item.quantity
+        inventory_service.log_movement(db, item.variant, -item.quantity, f"Sold - order {order.order_number}")
 
     # Simulate the demo payment — always succeeds, no real money moves.
     payment = Payment(
@@ -176,6 +177,7 @@ def cancel_demo_order(db: Session, order_number: str) -> Order:
         try:
             variant = product_service.get_variant(db, item.variant_id)
             variant.stock += item.quantity
+            inventory_service.log_movement(db, variant, item.quantity, f"Restocked - {order_number} cancelled")
         except product_service.VariantNotFoundError:
             pass  # variant may have been deleted since
 

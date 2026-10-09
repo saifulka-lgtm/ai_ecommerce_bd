@@ -42,11 +42,11 @@ async def _fulfillment_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    # Only creates tables that are missing (e.g. order_status_events,
+    # stock_movements); never alters existing ones.
+    Base.metadata.create_all(bind=engine)
     task = None
     if settings.auto_fulfillment_enabled:
-        # Only creates tables that are missing (e.g. order_status_events);
-        # never alters existing ones.
-        Base.metadata.create_all(bind=engine)
         task = asyncio.create_task(_fulfillment_loop())
     yield
     if task:

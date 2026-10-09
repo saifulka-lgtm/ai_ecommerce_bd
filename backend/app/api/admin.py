@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.api.deps import require_admin
-from app.services import auth_service, product_service, order_service, fulfillment_service
+from app.services import auth_service, product_service, order_service, fulfillment_service, inventory_service
 from app.models.product import Product
 from app.models.order import Order, OrderStatus
 from app.schemas.admin import AdminLoginRequest, AdminLoginResponse, DashboardStats
@@ -47,6 +47,18 @@ def dashboard(db: Session = Depends(get_db)):
         demo_sales_amount=round(demo_sales_amount, 2),
         low_stock_products=low_stock,
     )
+
+
+# ---- Inventory tracking (read-only) ----
+
+@router.get("/inventory", dependencies=[Depends(require_admin)])
+def inventory(db: Session = Depends(get_db)):
+    return inventory_service.inventory_overview(db)
+
+
+@router.get("/stock-movements", dependencies=[Depends(require_admin)])
+def stock_movements(limit: int = 30, db: Session = Depends(get_db)):
+    return inventory_service.list_movements(db, limit)
 
 
 # ---- Category management ----
