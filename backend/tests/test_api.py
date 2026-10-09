@@ -84,3 +84,58 @@ def test_chat_endpoint(client, sample_catalog, session_id):
     body = res.json()
     assert body["tool_used"] == "search_products"
     assert len(body["data"]["products"]) == 1
+
+
+# ---- Admin AI order assistant ----
+
+def _admin_headers(client):
+    res = client.post("/api/admin/login", json={"username": "admin", "password": "admin123"})
+    return {"Authorization": f"Bearer {res.json()['access_token']}"}
+
+
+def _make_order(client, db, sample_catalog):
+    from app.models.product import ProductVariant
+    variant = sample_catalog["variants"][0]
+    sid = "admin-ai-test"
+    client.post("/api/cart/add", json={"session_id": sid, "variant_id": str(variant.id), "quantity": 1})
+    res = client.post("/api/orders", json={
+        "session_id": sid, "customer_name": "Rahim", "customer_phone": "01712345678",
+        "customer_address": "Dhaka", "payment_method": "demo_cod",
+    })
+    assert res.status_code == 200, res.text
+    return res.json()["order_number"]
+
+
+def test_admin_ai_chat_requires_auth(client):
+    res = client.post("/api/admin/ai-chat", json={"message": "DEMO-1234 ship"})
+    assert res.status_code == 401
+
+
+def test_admin_ai_chat_updates_status_bangla_and_english(client, db, sample_catalog):
+    number = _make_order(client, db, sample_catalog)
+    h = _admin_headers(client)
+
+    res = client.post("/api/admin/ai-chat", json={"message": f"{number} শিপ করো"}, headers=h)
+    assert res.status_code == 200
+    body = res.json()
+    assert body["changed"] is True
+    assert body["orders"][0]["order_status"] == "SHIPPED"
+
+    res = client.post("/api/admin/ai-chat", json={"message": f"mark {number} as delivered"}, headers=h)
+    assert res.json()["orders"][0]["order_status"] == "DELIVERED"
+
+    # DELIVERED is final
+    res = client.post("/api/admin/ai-chat", json={"message": f"{number} cancel"}, headers=h)
+    assert res.json()["changed"] is False
+    assert res.json()["orders"][0]["order_status"] == "DELIVERED"
+
+
+def test_admin_ai_chat_lists_orders_and_handles_unknown(client, db, sample_catalog):
+    number = _make_order(client, db, sample_catalog)
+    h = _admin_headers(client)
+    res = client.post("/api/admin/ai-chat", json={"message": "show pending orders"}, headers=h)
+    assert number in res.json()["reply"]
+    res = client.post("/api/admin/ai-chat", json={"message": "DEMO-0000 ship"}, headers=h)
+    assert "not found" in res.json()["reply"]
+    res = client.post("/api/admin/ai-chat", json={"message": "hello"}, headers=h)
+    assert res.json()["orders"] == []

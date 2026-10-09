@@ -18,3 +18,7 @@ class DashboardStats(BaseModel):
     completed_orders: int
     demo_sales_amount: float
     low_stock_products: int
+
+
+class AdminChatRequest(BaseModel):
+    message: str

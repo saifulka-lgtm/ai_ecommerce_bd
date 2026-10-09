@@ -9,7 +9,8 @@ from app.api.deps import require_admin
 from app.services import auth_service, product_service, order_service
 from app.models.product import Product
 from app.models.order import Order, OrderStatus
-from app.schemas.admin import AdminLoginRequest, AdminLoginResponse, DashboardStats
+from app.schemas.admin import AdminLoginRequest, AdminLoginResponse, DashboardStats, AdminChatRequest
+from app.ai import admin_assistant
 from app.schemas.product import ProductOut, ProductCreate, ProductUpdate, VariantCreate, VariantUpdate, VariantOut, CategoryOut, CategoryCreate
 from app.schemas.order import OrderOut, UpdateOrderStatusRequest
 from app.models.ai_conversation import AIToolLog
@@ -125,6 +126,13 @@ def update_order_status(order_id: uuid.UUID, payload: UpdateOrderStatusRequest, 
     except order_service.OrderNotFoundError:
         raise HTTPException(status_code=404, detail="Order not found")
     return order_service.to_out_dict(order)
+
+
+# ---- Admin AI assistant (order status by chat) ----
+
+@router.post("/ai-chat", dependencies=[Depends(require_admin)])
+def admin_ai_chat(payload: AdminChatRequest, db: Session = Depends(get_db)):
+    return admin_assistant.handle_admin_message(db, payload.message)
 
 
 # ---- AI activity log ----
