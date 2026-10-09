@@ -120,6 +120,13 @@ class MockAIProvider(AIProvider):
                 language=language,
             )
 
+        if intent == "order_details":
+            return AgentDecision(
+                tool_name="get_order",
+                tool_arguments=_clean({"order_number": nlu.extract_order_number(message)}),
+                language=language,
+            )
+
         if intent == "cancel_order":
             return AgentDecision(
                 tool_name="cancel_demo_order",

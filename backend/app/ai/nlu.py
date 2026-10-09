@@ -80,6 +80,14 @@ REMOVE_WORDS = ["remove", "delete from cart", "বাদ দাও", "সরা�
 STATUS_WORDS = ["order status", "status of my order", "অর্ডারের অবস্থা", "অর্ডার স্ট্যাটাস"]
 CANCEL_WORDS = ["cancel", "বাতিল"]
 MY_ORDERS_WORDS = ["my orders", "order history", "আমার অর্ডার", "অর্ডার হিস্ট্রি"]
+
+# "Show me the details of my (delivered) order" -> full order details via the
+# get_order tool. Only fires when the message is also about an order, so
+# "product details" and "delivery charge" questions are not hijacked.
+ORDER_DETAIL_WORDS = [
+    "detail", "order info", "delivered",
+    "ডিটেল", "ডিটেইল", "বিস্তারিত", "ডেলিভার হয়েছে", "ডেলিভারি হয়েছে", "ডেলিভার্ড",
+]
 RECOMMEND_WORDS = ["recommend", "suggest", "সাজেস্ট", "ভালো কিছু দেখাও"]
 
 DISCOUNT_WORDS = [
@@ -314,6 +322,10 @@ def classify_intent(text: str) -> Tuple[str, str]:
         return "greeting", language
     if _contains_any(lower, CANCEL_WORDS) and "order" in lower or "বাতিল" in text:
         return "cancel_order", language
+    if (("order" in lower) or ("অর্ডার" in text)) and (
+        _contains_prefix_any(lower, ORDER_DETAIL_WORDS)
+    ):
+        return "order_details", language
     if _contains_any(lower, STATUS_WORDS):
         return "order_status", language
     if _contains_any(lower, MY_ORDERS_WORDS):

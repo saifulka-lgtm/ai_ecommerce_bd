@@ -156,10 +156,39 @@ def _create_order(data, language):
     )
 
 
+STATUS_TEXT = {
+    "PENDING": {"en": "pending", "bn": "অপেক্ষমাণ"},
+    "CONFIRMED": {"en": "confirmed", "bn": "কনফার্মড"},
+    "PROCESSING": {"en": "being processed", "bn": "প্রসেসিং চলছে"},
+    "SHIPPED": {"en": "shipped", "bn": "শিপ করা হয়েছে"},
+    "DELIVERED": {"en": "delivered", "bn": "ডেলিভারি সম্পন্ন হয়েছে"},
+    "CANCELLED": {"en": "cancelled", "bn": "বাতিল করা হয়েছে"},
+}
+
+
 def _get_order(data, language):
+    status = data["order_status"]
+    status_txt = STATUS_TEXT.get(status, {}).get(language, status)
+    items = data.get("items") or []
     if language == "bn":
-        return f"অর্ডার {data['order_number']} — অবস্থা: {data['order_status']}, পেমেন্ট: {data['payment_status']}, মোট: ৳{data['total']:.0f}।"
-    return f"Order {data['order_number']} — status: {data['order_status']}, payment: {data['payment_status']}, total: ৳{data['total']:.0f}."
+        lines = [f"অর্ডার {data['order_number']} — অবস্থা: {status_txt}।"]
+        for i in items:
+            lines.append(f"• {i['product_name']} ({i['size']}/{i['color']}) × {i['quantity']} = ৳{i['subtotal']:.0f}")
+        lines.append(f"ঠিকানা: {data['customer_address']}")
+        lines.append(
+            f"সাবটোটাল ৳{data['subtotal']:.0f}, ডেলিভারি চার্জ ৳{data['delivery_charge']:.0f}, "
+            f"মোট ৳{data['total']:.0f}। পেমেন্ট: {data['payment_status']}।"
+        )
+        return "\n".join(lines)
+    lines = [f"Order {data['order_number']} — status: {status_txt}."]
+    for i in items:
+        lines.append(f"• {i['product_name']} ({i['size']}/{i['color']}) x {i['quantity']} = ৳{i['subtotal']:.0f}")
+    lines.append(f"Address: {data['customer_address']}")
+    lines.append(
+        f"Subtotal ৳{data['subtotal']:.0f}, delivery ৳{data['delivery_charge']:.0f}, "
+        f"total ৳{data['total']:.0f}. Payment: {data['payment_status']}."
+    )
+    return "\n".join(lines)
 
 
 def _customer_orders(data, language):

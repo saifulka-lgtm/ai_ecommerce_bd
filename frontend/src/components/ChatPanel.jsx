@@ -245,12 +245,32 @@ function ChatBubble({ message, onAddToCart }) {
 }
 
 function OrderCard({ order, compact }) {
+  const rows = { color: "var(--text-2)", display: "flex", justifyContent: "space-between", gap: 12 };
+  const strong = { color: "var(--text-0)" };
+  const showDetails = !compact && Array.isArray(order.items) && order.items.length > 0;
   return (
     <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: 10, padding: 12, fontSize: 12, minWidth: 220 }}>
       <div style={{ fontWeight: 800, marginBottom: 4 }}>{order.order_number}</div>
-      <div style={{ color: "var(--text-2)" }}>Status: <b style={{ color: "var(--text-0)" }}>{order.order_status}</b></div>
-      <div style={{ color: "var(--text-2)" }}>Payment: <b style={{ color: "var(--text-0)" }}>{order.payment_status}</b></div>
-      <div style={{ color: "var(--text-2)" }}>Total: <b style={{ color: "var(--text-0)" }}>৳{order.total?.toLocaleString?.() ?? order.total}</b></div>
+      <div style={{ color: "var(--text-2)" }}>Status: <b style={strong}>{order.order_status}</b></div>
+      <div style={{ color: "var(--text-2)" }}>Payment: <b style={strong}>{order.payment_status}</b></div>
+
+      {showDetails && (
+        <div style={{ borderTop: "1px solid var(--border)", marginTop: 8, paddingTop: 8 }}>
+          {order.items.map((item, idx) => (
+            <div key={idx} style={rows}>
+              <span>{item.product_name} ({item.size}/{item.color}) × {item.quantity}</span>
+              <b style={strong}>৳{item.subtotal}</b>
+            </div>
+          ))}
+          <div style={{ ...rows, marginTop: 6 }}><span>Subtotal</span><b style={strong}>৳{order.subtotal}</b></div>
+          <div style={rows}><span>Delivery</span><b style={strong}>৳{order.delivery_charge}</b></div>
+          {order.customer_name && <div style={{ color: "var(--text-2)", marginTop: 6 }}>Name: <b style={strong}>{order.customer_name}</b></div>}
+          {order.customer_phone && <div style={{ color: "var(--text-2)" }}>Phone: <b style={strong}>{order.customer_phone}</b></div>}
+          {order.customer_address && <div style={{ color: "var(--text-2)" }}>Address: <b style={strong}>{order.customer_address}</b></div>}
+        </div>
+      )}
+
+      <div style={{ color: "var(--text-2)", marginTop: showDetails ? 6 : 0 }}>Total: <b style={strong}>৳{order.total?.toLocaleString?.() ?? order.total}</b></div>
     </div>
   );
 }

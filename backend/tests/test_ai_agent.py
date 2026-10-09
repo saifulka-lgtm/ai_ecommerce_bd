@@ -107,3 +107,62 @@ def test_greeting_does_not_call_any_tool(db, sample_catalog, session_id):
     assert result["tool_used"] is None
     logs = db.query(AIToolLog).all()
     assert logs == []
+
+
+# ---- Low-price / cheapest-first requests ----
+
+def _names(result):
+    return [p["name"] for p in result["data"]["products"]]
+
+
+def test_bangla_low_price_lists_products_cheapest_first(db, sample_catalog, session_id):
+    result = handle_message(db, session_id, "লো প্রাইজ প্রোডাক্ট দেখাও")
+    assert result["tool_used"] == "search_products"
+    # Jeans sale price 1499 vs T-Shirt 650 -> T-Shirt first
+    assert _names(result) == ["Basic Cotton T-Shirt", "Slim Fit Jeans"]
+    assert "650" in result["reply"]
+
+
+def test_english_cheap_and_expensive_ordering(db, sample_catalog, session_id):
+    cheap = handle_message(db, session_id, "Show cheap products")
+    assert _names(cheap)[0] == "Basic Cotton T-Shirt"
+    pricey = handle_message(db, session_id, "show most expensive products")
+    assert _names(pricey)[0] == "Slim Fit Jeans"
+
+
+def test_low_price_with_category_still_filters(db, sample_catalog, session_id):
+    result = handle_message(db, session_id, "কম দামের জিন্স")
+    assert _names(result) == ["Slim Fit Jeans"]
+
+
+# ---- Delivered order details ----
+
+def _place_order(db, session_id):
+    handle_message(db, session_id, "Show me black t-shirts")
+    handle_message(db, session_id, "Add the first one to cart size M black")
+    handle_message(db, session_id, "I want to place an order")
+    return handle_message(
+        db, session_id,
+        "Name: Rahim, phone 01712345678, address: House 5, Road 3, Dhaka, payment demo_cod",
+    )
+
+
+def test_delivered_order_details_shown_in_bangla_and_english(db, sample_catalog, session_id):
+    from app.services import order_service
+    from app.models.order import Order
+    placed = _place_order(db, session_id)
+    number = placed["data"]["order_number"]
+    order = db.query(Order).filter(Order.order_number == number).first()
+    order_service.update_order_status(db, order.id, "DELIVERED", None)
+
+    bn = handle_message(db, session_id, "আমার অর্ডার ডেলিভার হয়েছে, ডিটেল দেখাও")
+    assert bn["tool_used"] == "get_order"
+    assert number in bn["reply"]
+    assert "ডেলিভারি সম্পন্ন" in bn["reply"]
+    assert "Basic Cotton T-Shirt" in bn["reply"]
+    assert bn["data"]["order"]["items"]
+
+    en = handle_message(db, session_id, f"Show details of order {number}")
+    assert en["tool_used"] == "get_order"
+    assert "delivered" in en["reply"]
+    assert "House 5" in en["reply"]
