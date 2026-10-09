@@ -136,3 +136,38 @@ def test_inventory_overview_and_movements_follow_orders(client, db, sample_catal
     assert mv[0]["change"] == 1 and mv[0]["stock_after"] == 10
     inv = client.get("/api/admin/inventory", headers=h).json()
     assert inv["summary"]["total_units"] == 38
+
+
+# ---- AI stock notifications ----
+
+def test_ai_raises_low_and_out_of_stock_notifications_once(client, db, sample_catalog):
+    from app.services import inventory_service
+    token = client.post("/api/admin/login", json={"username": "admin", "password": "admin123"}).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    assert client.get("/api/admin/notifications").status_code == 401
+
+    variant = sample_catalog["variants"][1]  # T-Shirt M/Black, stock 5
+    # 5 -> 4: was already low (not above the threshold), so no alert yet.
+    variant.stock -= 1
+    inventory_service.log_movement(db, variant, -1, "test")
+    db.commit()
+    assert client.get("/api/admin/notifications", headers=h).json()["unread_count"] == 0
+
+    # 10 -> 5 crosses the threshold -> one LOW_STOCK alert.
+    v0 = sample_catalog["variants"][0]  # S/Black, stock 10
+    v0.stock = 5
+    inventory_service.log_movement(db, v0, -5, "test")
+    db.commit()
+    data = client.get("/api/admin/notifications", headers=h).json()
+    assert data["unread_count"] == 1 and data["items"][0]["type"] == "LOW_STOCK"
+    assert "5" in data["items"][0]["message"]
+
+    # 5 -> 0 -> OUT_OF_STOCK alert; a further move below does not repeat it.
+    v0.stock = 0
+    inventory_service.log_movement(db, v0, -5, "test")
+    db.commit()
+    data = client.get("/api/admin/notifications", headers=h).json()
+    assert data["unread_count"] == 2 and data["items"][0]["type"] == "OUT_OF_STOCK"
+
+    assert client.post("/api/admin/notifications/read", headers=h).json()["marked_read"] == 2
+    assert client.get("/api/admin/notifications", headers=h).json()["unread_count"] == 0

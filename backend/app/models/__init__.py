@@ -11,3 +11,4 @@ from app.models.payment import Payment  # noqa
 from app.models.ai_conversation import AIConversation, AIMessage, AIToolLog  # noqa
 from app.models.order_event import OrderStatusEvent  # noqa
 from app.models.stock_movement import StockMovement  # noqa
+from app.models.notification import Notification  # noqa

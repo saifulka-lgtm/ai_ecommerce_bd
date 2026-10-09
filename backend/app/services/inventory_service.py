@@ -8,6 +8,7 @@ from typing import List
 from sqlalchemy.orm import Session
 
 from app.models.product import Product, ProductVariant
+from app.models.notification import Notification
 from app.models.stock_movement import StockMovement
 from app.services import product_service
 
@@ -32,6 +33,51 @@ def log_movement(db: Session, variant: ProductVariant, change: int, reason: str)
         stock_after=variant.stock,
         reason=reason,
     ))
+    _raise_stock_alert(db, variant, previous_stock=variant.stock - change)
+
+
+def _raise_stock_alert(db: Session, variant: ProductVariant, previous_stock: int) -> None:
+    """The AI notifies the admin on its own, once, when a variant FIRST drops
+    to low stock or runs out - not on every further sale."""
+    now = variant.stock
+    name = f"{variant.product.name} ({variant.size}/{variant.color})"
+    if now <= 0 < previous_stock:
+        db.add(Notification(
+            type="OUT_OF_STOCK",
+            title="স্টক শেষ",
+            message=f"{name} — স্টক শেষ হয়ে গেছে। দ্রুত রিস্টক করা দরকার।",
+        ))
+    elif 0 < now <= LOW_STOCK_THRESHOLD < previous_stock:
+        db.add(Notification(
+            type="LOW_STOCK",
+            title="স্টক কমে গেছে",
+            message=f"{name} — স্টক কমে মাত্র {now} পিস আছে।",
+        ))
+
+
+def list_notifications(db: Session, limit: int = 30) -> dict:
+    rows = db.query(Notification).order_by(Notification.created_at.desc()).limit(limit).all()
+    unread = db.query(Notification).filter(Notification.is_read.is_(False)).count()
+    return {
+        "unread_count": unread,
+        "items": [
+            {
+                "id": str(r.id),
+                "type": r.type,
+                "title": r.title,
+                "message": r.message,
+                "is_read": r.is_read,
+                "created_at": r.created_at.isoformat(),
+            }
+            for r in rows
+        ],
+    }
+
+
+def mark_all_read(db: Session) -> int:
+    n = db.query(Notification).filter(Notification.is_read.is_(False)).update({"is_read": True})
+    db.commit()
+    return n
 
 
 def inventory_overview(db: Session) -> dict:

@@ -61,6 +61,18 @@ def stock_movements(limit: int = 30, db: Session = Depends(get_db)):
     return inventory_service.list_movements(db, limit)
 
 
+# ---- AI notifications (raised automatically, e.g. low stock) ----
+
+@router.get("/notifications", dependencies=[Depends(require_admin)])
+def notifications(limit: int = 30, db: Session = Depends(get_db)):
+    return inventory_service.list_notifications(db, limit)
+
+
+@router.post("/notifications/read", dependencies=[Depends(require_admin)])
+def notifications_mark_read(db: Session = Depends(get_db)):
+    return {"marked_read": inventory_service.mark_all_read(db)}
+
+
 # ---- Category management ----
 
 @router.post("/categories", response_model=CategoryOut, dependencies=[Depends(require_admin)])
