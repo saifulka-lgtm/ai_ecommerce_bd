@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.order import Order, OrderItem, OrderStatus
 from app.models.payment import Payment
+from app.models.product import ProductVariant
 from app.services import cart_service, product_service, inventory_service
 from app.utils.generators import generate_order_number, generate_transaction_ref
 
@@ -57,8 +58,23 @@ def create_demo_order(
     if not totals["items"]:
         raise EmptyCartError("Cannot create an order from an empty cart")
 
-    # Re-verify stock for every line right before committing the order.
+    # Lock the variant rows (FOR UPDATE) BEFORE checking stock, and re-read
+    # their current stock. Without this, two customers buying the last unit at
+    # the same moment would both pass the check and stock would go negative:
+    # the second one now waits here, then sees the real remaining stock.
     cart = cart_service.get_or_create_cart(db, session_id)
+    variant_ids = sorted({item.variant_id for item in cart.items})
+    if variant_ids:
+        (
+            db.query(ProductVariant)
+            .filter(ProductVariant.id.in_(variant_ids))
+            .order_by(ProductVariant.id)          # fixed order -> no deadlocks
+            .with_for_update()
+            .populate_existing()
+            .all()
+        )
+
+    # Re-verify stock for every line right before committing the order.
     for item in cart.items:
         if item.variant.stock < item.quantity:
             raise cart_service.InsufficientStockError(
@@ -121,6 +137,41 @@ def create_demo_order(
     return _loaded(db, order)
 
 
+def _digits(phone: Optional[str]) -> str:
+    return "".join(ch for ch in (phone or "") if ch.isdigit())
+
+
+def phones_match(a: Optional[str], b: Optional[str]) -> bool:
+    """Compare Bangladeshi phone numbers ignoring +88 / spaces / dashes:
+    the last 10 digits (e.g. 1712345678) must be identical."""
+    da, db_ = _digits(a), _digits(b)
+    return len(da) >= 10 and len(db_) >= 10 and da[-10:] == db_[-10:]
+
+
+def get_order_for_customer(db: Session, order_number: str, phone: Optional[str]) -> Order:
+    """Return the order only if `phone` is the phone it was placed with.
+    A wrong number and an unknown order number raise the SAME error, so
+    nobody can use this to discover which order numbers exist."""
+    try:
+        order = get_order_by_number(db, order_number)
+    except OrderNotFoundError:
+        raise OrderNotFoundError("No order found for that order number and phone")
+    if not phones_match(order.customer_phone, phone):
+        raise OrderNotFoundError("No order found for that order number and phone")
+    return order
+
+
+def to_summary_dict(order: Order) -> dict:
+    """Privacy-safe view for lists: no name, phone, address or items."""
+    return {
+        "order_number": order.order_number,
+        "order_status": order.order_status.value,
+        "payment_status": order.payment_status,
+        "total": float(order.total),
+        "created_at": order.created_at.isoformat(),
+    }
+
+
 def get_order_by_number(db: Session, order_number: str) -> Order:
     order = (
         db.query(Order)
@@ -167,6 +218,9 @@ def check_order_status(db: Session, order_number: str) -> dict:
 
 def cancel_demo_order(db: Session, order_number: str) -> Order:
     order = get_order_by_number(db, order_number)
+    # Lock the order row so a double-click / two requests can't both cancel it
+    # and restock the items twice.
+    db.query(Order).filter(Order.id == order.id).with_for_update().populate_existing().one()
     if order.order_status not in CANCELLABLE_STATUSES:
         raise OrderNotCancellableError(
             f"Order {order_number} is {order.order_status.value} and can no longer be cancelled"

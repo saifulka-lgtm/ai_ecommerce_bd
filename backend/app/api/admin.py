@@ -4,7 +4,9 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.database import get_db
+from app.utils.rate_limit import RateLimiter, rate_limited
 from app.api.deps import require_admin
 from app.services import auth_service, product_service, order_service, fulfillment_service, inventory_service
 from app.models.product import Product
@@ -19,7 +21,14 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 # ---- Auth ----
 
-@router.post("/login", response_model=AdminLoginResponse)
+_login_limiter = RateLimiter(get_settings().login_rate_limit_per_minute)
+
+
+@router.post(
+    "/login",
+    response_model=AdminLoginResponse,
+    dependencies=[Depends(rate_limited(_login_limiter, "Too many login attempts. Try again in a minute."))],
+)
 def login(payload: AdminLoginRequest):
     try:
         token = auth_service.authenticate_admin(payload.username, payload.password)

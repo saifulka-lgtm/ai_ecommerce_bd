@@ -116,21 +116,30 @@ class MockAIProvider(AIProvider):
         if intent == "order_status":
             return AgentDecision(
                 tool_name="check_order_status",
-                tool_arguments=_clean({"order_number": nlu.extract_order_number(message)}),
+                tool_arguments=_clean({
+                    "order_number": nlu.extract_order_number(message),
+                    "customer_phone": nlu.extract_phone(message) or nlu.extract_phone(_history_text(history)),
+                }),
                 language=language,
             )
 
         if intent == "order_details":
             return AgentDecision(
                 tool_name="get_order",
-                tool_arguments=_clean({"order_number": nlu.extract_order_number(message)}),
+                tool_arguments=_clean({
+                    "order_number": nlu.extract_order_number(message),
+                    "customer_phone": nlu.extract_phone(message) or nlu.extract_phone(_history_text(history)),
+                }),
                 language=language,
             )
 
         if intent == "cancel_order":
             return AgentDecision(
                 tool_name="cancel_demo_order",
-                tool_arguments=_clean({"order_number": nlu.extract_order_number(message)}),
+                tool_arguments=_clean({
+                    "order_number": nlu.extract_order_number(message),
+                    "customer_phone": nlu.extract_phone(message) or nlu.extract_phone(_history_text(history)),
+                }),
                 language=language,
             )
 

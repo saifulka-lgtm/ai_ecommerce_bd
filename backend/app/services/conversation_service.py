@@ -75,6 +75,25 @@ def get_last_shown_products(db: Session, conversation: AIConversation) -> List[D
     return msg.structured_data.get("products", [])
 
 
+def get_conversation_order_numbers(db: Session, conversation: AIConversation) -> set:
+    """Order numbers created inside this very chat session — the customer who
+    placed them is, by definition, the one talking, so no phone check needed."""
+    rows = (
+        db.query(AIMessage)
+        .filter(
+            AIMessage.conversation_id == conversation.id,
+            AIMessage.role == "assistant",
+            AIMessage.structured_data.isnot(None),
+        )
+        .all()
+    )
+    return {
+        m.structured_data["order_number"]
+        for m in rows
+        if m.structured_data and m.structured_data.get("order_number")
+    }
+
+
 def get_last_order_number(db: Session, conversation: AIConversation) -> Optional[str]:
     msg = (
         db.query(AIMessage)

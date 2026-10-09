@@ -43,3 +43,12 @@ class CreateOrderRequest(BaseModel):
 class UpdateOrderStatusRequest(BaseModel):
     order_status: Optional[str] = None
     payment_status: Optional[str] = None
+
+
+class OrderSummary(BaseModel):
+    """Privacy-safe order view used in lists."""
+    order_number: str
+    order_status: str
+    payment_status: str
+    total: float
+    created_at: str

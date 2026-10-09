@@ -289,7 +289,7 @@ def extract_address(text: str) -> Optional[str]:
 
 
 def extract_order_number(text: str) -> Optional[str]:
-    match = re.search(r"DEMO-\d{4}", text.upper())
+    match = re.search(r"DEMO-\d{4,10}", text.upper())
     return match.group(0) if match else None
 
 

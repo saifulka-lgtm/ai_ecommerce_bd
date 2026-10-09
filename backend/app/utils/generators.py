@@ -1,9 +1,12 @@
 import random
+import secrets
 import string
 
 
 def generate_order_number() -> str:
-    suffix = "".join(random.choices(string.digits, k=4))
+    # 8 random digits (100 million combinations) from a cryptographically
+    # secure source, so order numbers can't be guessed or enumerated.
+    suffix = "".join(secrets.choice(string.digits) for _ in range(8))
     return f"DEMO-{suffix}"
 
 

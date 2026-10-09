@@ -8,7 +8,9 @@ Safe to re-run: it clears existing catalog data first (not orders/AI logs).
 """
 import random
 
-from app.database import Base, engine, SessionLocal
+from sqlalchemy import inspect
+
+from app.database import engine, SessionLocal
 from app import models
 from app.models.category import Category
 from app.models.product import Product, ProductVariant
@@ -66,7 +68,9 @@ PRODUCTS = [
 
 
 def run():
-    Base.metadata.create_all(bind=engine)
+    # Tables come from Alembic migrations, not from here.
+    if "products" not in inspect(engine).get_table_names():
+        raise SystemExit("Database tables are missing. Run first:  alembic upgrade head")
     db = SessionLocal()
     try:
         print("Clearing existing catalog data...")

@@ -68,6 +68,21 @@ Leave `AI_PROVIDER=mock` for now — the whole demo works with **zero API
 cost** using the built-in rule-based Bangla/English understanding. See
 section 14 below to switch to Claude or Ollama later.
 
+### Create the tables (database migrations)
+
+The database schema is versioned with **Alembic**. On a NEW empty database:
+
+```powershell
+alembic upgrade head
+```
+
+If your database already has the tables (you set it up before migrations
+existed), tell Alembic once that it is up to date instead:
+
+```powershell
+alembic stamp head
+```
+
 ### Seed demo products
 
 ```powershell
@@ -245,3 +260,40 @@ If `AI_PROVIDER=ollama` is set but Ollama isn't reachable, the app replies
   the AI and the client can never set a price or a total directly.
 - The AI only acts through the 15 controlled tools; it has no direct
   database access.
+- **Order privacy:** order numbers are random 8-digit codes. Looking up or
+  cancelling an order that was not placed in the current chat requires the
+  phone number it was placed with; a wrong phone and an unknown order give the
+  identical answer. Order *lists* show only number/status/total.
+- **Stock safety:** order creation locks the product-variant rows
+  (`SELECT ... FOR UPDATE`), so the last unit can never be sold twice.
+- **Abuse protection:** chat (30/min) and admin login (5/min) are rate limited per IP.
+- **Admin password:** set `ADMIN_PASSWORD_HASH` (`python -m app.utils.hash_password`)
+  instead of a plain password. With `ENVIRONMENT=production` the app refuses to
+  start on the default `SECRET_KEY` / `admin123`.
+
+## 14. Changing the database later (Alembic)
+
+Never edit tables by hand. After changing a model in `app/models`:
+
+```powershell
+alembic revision --autogenerate -m "describe the change"
+alembic upgrade head
+```
+
+Review the generated file in `alembic/versions/` before applying it.
+
+## 15. Run everything with Docker (optional)
+
+```powershell
+docker compose up --build
+docker compose exec backend python seed.py   # first run only
+```
+
+Store: http://localhost:8080 - API docs: http://localhost:8000/docs.
+Run only ONE backend container: the AI fulfillment loop runs inside it.
+
+## 16. Automatic checks (GitHub Actions)
+
+On every push/PR, `.github/workflows/ci.yml` applies the migrations to a fresh
+PostgreSQL, checks they match the models (`alembic check`), runs all tests and
+builds the frontend.

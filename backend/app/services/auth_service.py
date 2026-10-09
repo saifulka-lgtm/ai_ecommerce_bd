@@ -8,6 +8,7 @@ staying easy for a beginner to read end-to-end.
 import base64
 import hashlib
 import hmac
+import os
 import time
 
 from app.config import get_settings
@@ -30,8 +31,36 @@ def _sign(payload: str) -> str:
     return sig
 
 
+PBKDF2_ITERATIONS = 240_000
+
+
+def hash_password(password: str) -> str:
+    salt = os.urandom(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, PBKDF2_ITERATIONS)
+    return f"pbkdf2_sha256${PBKDF2_ITERATIONS}${salt.hex()}${digest.hex()}"
+
+
+def _verify_hash(password: str, stored: str) -> bool:
+    try:
+        _, iterations, salt_hex, digest_hex = stored.split("$")
+        digest = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt_hex), int(iterations))
+        return hmac.compare_digest(digest.hex(), digest_hex)
+    except Exception:
+        return False
+
+
+def _password_ok(password: str) -> bool:
+    if settings.admin_password_hash:
+        return _verify_hash(password, settings.admin_password_hash)
+    return hmac.compare_digest(password.encode(), settings.admin_password.encode())
+
+
 def authenticate_admin(username: str, password: str) -> str:
-    if username != settings.admin_username or password != settings.admin_password:
+    # Both checks always run and use constant-time comparison, so response
+    # timing doesn't reveal which of the two was wrong.
+    user_ok = hmac.compare_digest(username.encode(), settings.admin_username.encode())
+    pass_ok = _password_ok(password)
+    if not (user_ok and pass_ok):
         raise InvalidCredentialsError("Invalid admin username or password")
 
     expires_at = int(time.time()) + TOKEN_TTL_SECONDS

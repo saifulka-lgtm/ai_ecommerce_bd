@@ -131,7 +131,7 @@ def test_inventory_overview_and_movements_follow_orders(client, db, sample_catal
     mv = client.get("/api/admin/stock-movements", headers=h).json()
     assert mv[0]["change"] == -1 and number in mv[0]["reason"] and mv[0]["stock_after"] == 9
 
-    client.post(f"/api/orders/{number}/cancel")
+    client.post(f"/api/orders/{number}/cancel?phone=01712345678")
     mv = client.get("/api/admin/stock-movements", headers=h).json()
     assert mv[0]["change"] == 1 and mv[0]["stock_after"] == 10
     inv = client.get("/api/admin/inventory", headers=h).json()

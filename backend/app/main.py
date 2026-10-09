@@ -8,7 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.api import products, cart, orders, admin, chat
 
-from app.database import Base, SessionLocal, engine
+from sqlalchemy import inspect
+
+from app.database import SessionLocal, engine
 from app import models  # noqa: F401 - registers every table on Base.metadata
 from app.services import fulfillment_service
 
@@ -42,9 +44,14 @@ async def _fulfillment_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # Only creates tables that are missing (e.g. order_status_events,
-    # stock_movements); never alters existing ones.
-    Base.metadata.create_all(bind=engine)
+    # The database schema is managed by Alembic (alembic upgrade head),
+    # NOT created here. Warn loudly if it was never migrated.
+    try:
+        if "alembic_version" not in inspect(engine).get_table_names():
+            logger.warning("Database has no alembic_version table - run: alembic upgrade head "
+                           "(or, for an existing database: alembic stamp head)")
+    except Exception:  # noqa: BLE001 - never block startup on this check
+        logger.exception("could not check migration state")
     task = None
     if settings.auto_fulfillment_enabled:
         task = asyncio.create_task(_fulfillment_loop())

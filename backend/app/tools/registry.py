@@ -113,7 +113,10 @@ TOOL_SPECS = [
     ToolSpec(
         name="get_order",
         description="Look up a single order by its order number.",
-        parameters={"order_number": {"type": "string"}},
+        parameters={
+            "order_number": {"type": "string"},
+            "customer_phone": {"type": "string", "description": "Phone used when ordering; required for orders not placed in this chat"},
+        },
     ),
     ToolSpec(
         name="get_customer_orders",
@@ -123,12 +126,18 @@ TOOL_SPECS = [
     ToolSpec(
         name="cancel_demo_order",
         description="Cancel a demo order, if it is still in a cancellable state (PENDING or CONFIRMED).",
-        parameters={"order_number": {"type": "string"}},
+        parameters={
+            "order_number": {"type": "string"},
+            "customer_phone": {"type": "string", "description": "Phone used when ordering; required for orders not placed in this chat"},
+        },
     ),
     ToolSpec(
         name="check_order_status",
         description="Check the current order_status and payment_status of an order.",
-        parameters={"order_number": {"type": "string"}},
+        parameters={
+            "order_number": {"type": "string"},
+            "customer_phone": {"type": "string", "description": "Phone used when ordering; required for orders not placed in this chat"},
+        },
     ),
     ToolSpec(
         name="recommend_products",

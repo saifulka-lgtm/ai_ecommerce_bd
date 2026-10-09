@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.services import order_service, cart_service
-from app.schemas.order import CreateOrderRequest, OrderOut
+from app.schemas.order import CreateOrderRequest, OrderOut, OrderSummary
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -31,23 +31,25 @@ def create_order(payload: CreateOrderRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/{order_number}", response_model=OrderOut)
-def get_order(order_number: str, db: Session = Depends(get_db)):
+def get_order(order_number: str, phone: str = Query(..., description="Phone used when placing the order"), db: Session = Depends(get_db)):
     try:
-        order = order_service.get_order_by_number(db, order_number)
+        order = order_service.get_order_for_customer(db, order_number, phone)
     except order_service.OrderNotFoundError:
         raise HTTPException(status_code=404, detail="Order not found")
     return order_service.to_out_dict(order)
 
 
-@router.get("", response_model=list[OrderOut])
+@router.get("", response_model=list[OrderSummary])
 def get_customer_orders(phone: str = Query(...), db: Session = Depends(get_db)):
+    # Summary only (no names/addresses/items): a phone number alone is weak proof.
     orders = order_service.get_customer_orders(db, phone)
-    return [order_service.to_out_dict(o) for o in orders]
+    return [order_service.to_summary_dict(o) for o in orders]
 
 
 @router.post("/{order_number}/cancel", response_model=OrderOut)
-def cancel_order(order_number: str, db: Session = Depends(get_db)):
+def cancel_order(order_number: str, phone: str = Query(..., description="Phone used when placing the order"), db: Session = Depends(get_db)):
     try:
+        order_service.get_order_for_customer(db, order_number, phone)
         order = order_service.cancel_demo_order(db, order_number)
     except order_service.OrderNotFoundError:
         raise HTTPException(status_code=404, detail="Order not found")
