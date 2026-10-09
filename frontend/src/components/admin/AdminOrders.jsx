@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../../services/api";
-import AdminOrderAssistant from "./AdminOrderAssistant";
 
 const STATUSES = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"];
 
@@ -25,17 +24,15 @@ export default function AdminOrders({ token }) {
     return () => clearInterval(timer);
   }, [token, statusFilter]);
 
-  const updateStatus = async (order, status) => {
-    await api.adminUpdateOrderStatus(token, order.id, { order_status: status });
-    load();
+  const badgeColor = {
+    PENDING: "#f1c40f", CONFIRMED: "#3498db", SHIPPED: "#9b59b6", DELIVERED: "#2ecc71", CANCELLED: "#e74c3c",
   };
 
   return (
     <div>
       <div style={{ background: "rgba(46,204,113,0.10)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: 12, color: "var(--text-1)" }}>
-        AI Fulfillment Agent চালু আছে — নতুন অর্ডার নিজে থেকেই PENDING → CONFIRMED → SHIPPED → DELIVERED হবে। অ্যাডমিনকে কিছু করতে হবে না।
+        AI Fulfillment Agent চালু আছে — অর্ডার নিজে থেকেই PENDING → CONFIRMED → SHIPPED → DELIVERED হয়। এখানে আপনি শুধু ট্র্যাক করতে পারবেন।
       </div>
-      <AdminOrderAssistant token={token} onChanged={load} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <h3 style={{ margin: 0 }}>Orders ({orders.length})</h3>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ background: "var(--bg-3)", border: "1px solid var(--border)", color: "var(--text-0)", borderRadius: 8, padding: "6px 10px", fontSize: 12 }}>
@@ -59,14 +56,9 @@ export default function AdminOrders({ token }) {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ fontWeight: 700 }}>৳{o.total.toLocaleString()}</span>
-                  <select
-                    value={o.order_status}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => updateStatus(o, e.target.value)}
-                    style={{ background: "var(--bg-3)", border: "1px solid var(--border)", color: "var(--text-0)", borderRadius: 6, padding: "4px 8px", fontSize: 11 }}
-                  >
-                    {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  <span style={{ padding: "4px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: "var(--bg-3)", border: `1px solid ${badgeColor[o.order_status] || "var(--border)"}`, color: badgeColor[o.order_status] || "var(--text-0)" }}>
+                    {o.order_status}
+                  </span>
                 </div>
               </div>
 

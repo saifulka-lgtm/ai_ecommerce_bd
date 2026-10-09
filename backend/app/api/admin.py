@@ -9,8 +9,7 @@ from app.api.deps import require_admin
 from app.services import auth_service, product_service, order_service, fulfillment_service
 from app.models.product import Product
 from app.models.order import Order, OrderStatus
-from app.schemas.admin import AdminLoginRequest, AdminLoginResponse, DashboardStats, AdminChatRequest
-from app.ai import admin_assistant
+from app.schemas.admin import AdminLoginRequest, AdminLoginResponse, DashboardStats
 from app.schemas.product import ProductOut, ProductCreate, ProductUpdate, VariantCreate, VariantUpdate, VariantOut, CategoryOut, CategoryCreate
 from app.schemas.order import OrderOut, UpdateOrderStatusRequest
 from app.models.ai_conversation import AIToolLog
@@ -119,25 +118,13 @@ def get_order(order_id: uuid.UUID, db: Session = Depends(get_db)):
     return order_service.to_out_dict(order)
 
 
-@router.put("/orders/{order_id}/status", response_model=OrderOut, dependencies=[Depends(require_admin)])
-def update_order_status(order_id: uuid.UUID, payload: UpdateOrderStatusRequest, db: Session = Depends(get_db)):
-    try:
-        order = order_service.update_order_status(db, order_id, payload.order_status, payload.payment_status)
-    except order_service.OrderNotFoundError:
-        raise HTTPException(status_code=404, detail="Order not found")
-    return order_service.to_out_dict(order)
+# Order statuses are changed ONLY by the AI Fulfillment Agent; the admin tracks them.
+# (There is deliberately no endpoint here for changing an order's status.)
 
 
 @router.get("/fulfillment-events", dependencies=[Depends(require_admin)])
 def fulfillment_events(limit: int = 30, db: Session = Depends(get_db)):
     return fulfillment_service.list_events(db, limit)
-
-
-# ---- Admin AI assistant (order status by chat) ----
-
-@router.post("/ai-chat", dependencies=[Depends(require_admin)])
-def admin_ai_chat(payload: AdminChatRequest, db: Session = Depends(get_db)):
-    return admin_assistant.handle_admin_message(db, payload.message)
 
 
 # ---- AI activity log ----
