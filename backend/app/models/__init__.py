@@ -9,3 +9,4 @@ from app.models.cart import Cart, CartItem  # noqa
 from app.models.order import Order, OrderItem, OrderStatus  # noqa
 from app.models.payment import Payment  # noqa
 from app.models.ai_conversation import AIConversation, AIMessage, AIToolLog  # noqa
+from app.models.order_event import OrderStatusEvent  # noqa

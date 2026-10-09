@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.api.deps import require_admin
-from app.services import auth_service, product_service, order_service
+from app.services import auth_service, product_service, order_service, fulfillment_service
 from app.models.product import Product
 from app.models.order import Order, OrderStatus
 from app.schemas.admin import AdminLoginRequest, AdminLoginResponse, DashboardStats, AdminChatRequest
@@ -126,6 +126,11 @@ def update_order_status(order_id: uuid.UUID, payload: UpdateOrderStatusRequest, 
     except order_service.OrderNotFoundError:
         raise HTTPException(status_code=404, detail="Order not found")
     return order_service.to_out_dict(order)
+
+
+@router.get("/fulfillment-events", dependencies=[Depends(require_admin)])
+def fulfillment_events(limit: int = 30, db: Session = Depends(get_db)):
+    return fulfillment_service.list_events(db, limit)
 
 
 # ---- Admin AI assistant (order status by chat) ----

@@ -31,6 +31,14 @@ class Settings(BaseSettings):
     environment: str = "development"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
+    # AI fulfillment agent: moves orders PENDING -> CONFIRMED -> SHIPPED -> DELIVERED
+    # on its own. Times are demo-friendly seconds an order waits in each status.
+    auto_fulfillment_enabled: bool = True
+    fulfillment_poll_seconds: int = 10
+    fulfillment_confirm_after_seconds: int = 30
+    fulfillment_ship_after_seconds: int = 90
+    fulfillment_deliver_after_seconds: int = 180
+
     # Demo business rules
     demo_delivery_charge: float = 60.0
     free_delivery_threshold: float = 2000.0

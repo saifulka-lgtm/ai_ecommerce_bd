@@ -69,6 +69,7 @@ export const api = {
   adminUpdateOrderStatus: (token, orderId, payload) =>
     request(`/admin/orders/${orderId}/status`, { method: "PUT", body: payload, token }),
   adminAiChat: (token, message) => request("/admin/ai-chat", { method: "POST", body: { message }, token }),
+  adminFulfillmentEvents: (token, limit = 15) => request(`/admin/fulfillment-events?limit=${limit}`, { token }),
   adminListAILogs: (token, limit = 50) => request(`/admin/ai-logs?limit=${limit}`, { token }),
   adminCreateCategory: (token, name) => request("/admin/categories", { method: "POST", body: { name, slug: name.toLowerCase().replace(/\s+/g, "-") }, token }),
 };

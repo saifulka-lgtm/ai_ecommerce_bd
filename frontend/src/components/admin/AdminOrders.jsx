@@ -10,12 +10,20 @@ export default function AdminOrders({ token }) {
   const [expanded, setExpanded] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const load = () => {
-    setLoading(true);
+  const [events, setEvents] = useState([]);
+
+  const load = (silent = false) => {
+    if (silent !== true) setLoading(true);
     api.adminListOrders(token, statusFilter || undefined).then(setOrders).finally(() => setLoading(false));
+    api.adminFulfillmentEvents(token, 15).then(setEvents).catch(() => {});
   };
 
-  useEffect(load, [token, statusFilter]);
+  // The AI fulfillment agent changes statuses in the background, so refresh quietly.
+  useEffect(() => {
+    load();
+    const timer = setInterval(() => load(true), 8000);
+    return () => clearInterval(timer);
+  }, [token, statusFilter]);
 
   const updateStatus = async (order, status) => {
     await api.adminUpdateOrderStatus(token, order.id, { order_status: status });
@@ -24,6 +32,9 @@ export default function AdminOrders({ token }) {
 
   return (
     <div>
+      <div style={{ background: "rgba(46,204,113,0.10)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: 12, color: "var(--text-1)" }}>
+        AI Fulfillment Agent চালু আছে — নতুন অর্ডার নিজে থেকেই PENDING → CONFIRMED → SHIPPED → DELIVERED হবে। অ্যাডমিনকে কিছু করতে হবে না।
+      </div>
       <AdminOrderAssistant token={token} onChanged={load} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <h3 style={{ margin: 0 }}>Orders ({orders.length})</h3>
@@ -79,6 +90,20 @@ export default function AdminOrders({ token }) {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {events.length > 0 && (
+        <div style={{ marginTop: 22 }}>
+          <h4 style={{ margin: "0 0 8px" }}>AI Fulfillment Activity</h4>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {events.map((ev) => (
+              <div key={ev.id} style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 12px", fontSize: 12, display: "flex", justifyContent: "space-between" }}>
+                <span><b>{ev.order_number}</b>: {ev.from_status} → <b style={{ color: "var(--bd-green-light)" }}>{ev.to_status}</b></span>
+                <span style={{ color: "var(--text-2)" }}>{ev.actor} · {new Date(ev.created_at + "Z").toLocaleTimeString()}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

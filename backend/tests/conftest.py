@@ -14,6 +14,8 @@ from sqlalchemy.orm import sessionmaker
 
 os.environ.setdefault("DATABASE_URL", "postgresql+psycopg2://postgres:postgres@localhost:5432/ai_ecommerce_bd_test")
 os.environ.setdefault("AI_PROVIDER", "mock")
+# The background fulfillment loop must not touch the test database.
+os.environ.setdefault("AUTO_FULFILLMENT_ENABLED", "false")
 os.environ.setdefault("SECRET_KEY", "test-secret")
 os.environ.setdefault("ADMIN_USERNAME", "admin")
 os.environ.setdefault("ADMIN_PASSWORD", "admin123")
